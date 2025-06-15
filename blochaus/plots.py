@@ -4,7 +4,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timezone
 import pytz
-from scipy import stats
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.seasonal import seasonal_decompose
@@ -246,12 +245,11 @@ def make_plots(
         .rolling(window=3, center=True, min_periods=1)
         .mean()
     )
-    slope, intercept, r_value, p_value, std_err = stats.linregress(
-        range(len(visits_over_time)), visits_over_time["visit_count"]
-    )
+    x = np.arange(len(visits_over_time))
+    y = visits_over_time["visit_count"].values
+
+    slope, intercept = np.polyfit(x, y, 1)
     summary["trend_slope"] = round(slope, 4)
-    summary["trend_r_squared"] = round(r_value**2, 4)
-    summary["trend_p_value"] = round(p_value, 4)
     trend_line = intercept + slope * np.arange(len(visits_over_time))
 
     # Seasonality Analysis
@@ -385,7 +383,6 @@ def make_plots(
         ["Most Common Pass Type", summary["most_common_pass_type"]],
         ["Peak Visit Hour", f"{summary['peak_visit_hour']}:00"],
         ["Trend Slope", f"{summary['trend_slope']:.4f} increase {period_name}"],
-        ["Trend R²", f"{summary['trend_r_squared']:.4f}"],
         [
             "Seasonal Strength",
             f"{summary['seasonal_strength']} {summary['seasonality_period']}",
