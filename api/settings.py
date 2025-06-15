@@ -26,6 +26,8 @@ DEBUG = getenv("DEBUG", "False") == "True"
 ROOT_URLCONF = "api.urls"
 WSGI_APPLICATION = "api.wsgi.application"
 
+APPEND_SLASH = False
+
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 if not DEBUG:
     # Strengthen security to secure cookies
@@ -35,7 +37,7 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
