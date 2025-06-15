@@ -67,37 +67,6 @@ def login_page(request):
 
     return render(request, "login_form.html", {"username": username})
 
-
-# def dashboard(request):
-#     if "username" not in request.session and request.COOKIES.get("remembered_password"):
-#         return redirect("login")
-
-#     # Handle logout POST request
-#     if request.method == "POST" and "logout" in request.POST:
-#         response = redirect("login")
-#         # Clear session
-#         request.session.flush()
-#         # Clear password cookie
-#         response.delete_cookie("remembered_password")
-#         return response
-
-#     plots = []
-#     if request.method == "POST" and "logout" not in request.POST:
-#         start_date = request.POST.get("start_date")
-#         end_date = request.POST.get("end_date")
-#         username = request.session["username"]
-#         encrypted_password = request.COOKIES.get("remembered_password")
-#         password = fernet.decrypt(encrypted_password.encode()).decode()
-#         auth = retrieve_auth(username, password)
-#         assert auth
-#         figures = make_plots(auth, start_date, end_date)
-#         plots = [
-#             pio.to_html(fig, full_html=False, include_plotlyjs=False) for fig in figures
-#         ]
-
-#     return render(request, "dashboard.html", {"plots": plots})
-
-
 def dashboard(request):
     from django.core.cache import cache
 
