@@ -24,7 +24,7 @@ ALLOWED_HOSTS = getenv("ALLOWED_HOSTS", "127.0.0.1").split(",")
 DEBUG = getenv("DEBUG", "False") == "True"
 
 ROOT_URLCONF = "api.urls"
-WSGI_APPLICATION = "api.wsgi.app"
+WSGI_APPLICATION = "api.wsgi.application"
 
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 if not DEBUG:
