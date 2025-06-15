@@ -36,7 +36,3 @@ _.h5
 
 .DS_Store
 Thumbs.db
-
-# dev_static files
-
-dev_static/
