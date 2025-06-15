@@ -1,0 +1,38 @@
+# Ignore Python build artifacts
+
+**pycache**/
+_.pyc
+_.pyo
+\*.pyd
+
+# Ignore virtual environments
+
+.venv/
+env/
+venv/
+
+# Ignore large data/model files
+
+_.csv
+_.tsv
+_.json
+_.xlsx
+_.feather
+_.parquet
+_.pkl
+_.joblib
+_.pt
+_.h5
+
+# Ignore logs and test output
+
+\*.log
+
+# Ignore Jupyter notebooks (if not needed)
+
+\*.ipynb
+
+# Ignore temp files
+
+.DS_Store
+Thumbs.db
