@@ -7,8 +7,6 @@ import pytz
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 from .utils import retrieve_data
 
@@ -300,13 +298,6 @@ def make_plots(
             start=ts_data.index[-1] + pd.offsets.MonthBegin(0), periods=12, freq="MS"
         )
 
-        def try_exponential_smoothing():
-            model = ExponentialSmoothing(
-                ts_data, trend="add", seasonal="add", seasonal_periods=12
-            ).fit()
-            forecast = model.forecast(12)
-            return forecast
-
         def try_linear_regression():
             ts_data_reset = ts_data.reset_index()
             ts_data_reset["t"] = np.arange(len(ts_data_reset))
@@ -316,26 +307,9 @@ def make_plots(
             )
             forecast = reg.predict(future_t)
             return pd.Series(forecast, index=future_dates)
-
-        def try_sarimax():
-            model = SARIMAX(ts_data, order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
-            model_fit = model.fit(disp=False)
-            forecast = model_fit.forecast(steps=len(future_dates))
-            return pd.Series(forecast, index=future_dates)
-
-        # Try Prophet if available and more than 12 months of data
-        if len(monthly_counts) >= 12:
-            print(f"Prophet failed: {e}. Falling back to Exponential Smoothing.")
-            forecast_series = try_exponential_smoothing()
-            forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
-        else:
-            try:
-                forecast_series = try_sarimax()
-                forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
-            except Exception as e:
-                print(f"SARIMAX failed: {e}. Falling back to Linear Regression.")
-                forecast_series = try_linear_regression()
-                forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
+        
+        forecast_series = try_linear_regression()
+        forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
 
         # Add forecast type
         forecast_df["type"] = "Forecast"
