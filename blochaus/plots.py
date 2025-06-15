@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 from datetime import datetime, timezone
 import pytz
 import numpy as np
-from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 from .utils import retrieve_data
@@ -301,11 +300,14 @@ def make_plots(
         def try_linear_regression():
             ts_data_reset = ts_data.reset_index()
             ts_data_reset["t"] = np.arange(len(ts_data_reset))
-            reg = LinearRegression().fit(ts_data_reset[["t"]], ts_data_reset["y"])
-            future_t = np.arange(len(ts_data_reset), len(ts_data_reset) + 12).reshape(
-                -1, 1
-            )
-            forecast = reg.predict(future_t)
+            
+            # Fit a first-degree polynomial (line) using NumPy
+            slope, intercept = np.polyfit(ts_data_reset["t"], ts_data_reset["y"], 1)
+
+            # Predict future values
+            future_t = np.arange(len(ts_data_reset), len(ts_data_reset) + 12)
+            forecast = slope * future_t + intercept
+
             return pd.Series(forecast, index=future_dates)
         
         forecast_series = try_linear_regression()
