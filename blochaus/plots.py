@@ -10,7 +10,6 @@ from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from prophet import Prophet
 
 from .utils import retrieve_data
 
@@ -326,30 +325,11 @@ def make_plots(
             forecast = model_fit.forecast(steps=len(future_dates))
             return pd.Series(forecast, index=future_dates)
 
-        def try_prophet():
-            prophet_df = ts_data.reset_index().rename(columns={"ds": "ds", "y": "y"})
-            model = Prophet(
-                yearly_seasonality=True,
-                weekly_seasonality=False,
-                daily_seasonality=False,
-            )
-            model.fit(prophet_df)
-            future = pd.DataFrame({"ds": future_dates})
-            forecast = model.predict(future)
-            return forecast.set_index("ds")["yhat"], forecast[
-                ["ds", "yhat_lower", "yhat_upper"]
-            ]
-
         # Try Prophet if available and more than 12 months of data
         if len(monthly_counts) >= 12:
-            try:
-                forecast_series, full_forecast = try_prophet()
-                forecast_df = full_forecast.copy()
-                forecast_df["y"] = forecast_df["yhat"]
-            except Exception as e:
-                print(f"Prophet failed: {e}. Falling back to Exponential Smoothing.")
-                forecast_series = try_exponential_smoothing()
-                forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
+            print(f"Prophet failed: {e}. Falling back to Exponential Smoothing.")
+            forecast_series = try_exponential_smoothing()
+            forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
         else:
             try:
                 forecast_series = try_sarimax()
