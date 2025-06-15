@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 from datetime import datetime, timezone
 import pytz
 import numpy as np
-from statsmodels.tsa.seasonal import seasonal_decompose
 
 from .utils import retrieve_data
 
@@ -266,28 +265,6 @@ def make_plots(
         else:
             period = 1  # fallback
             seasonality_period_desc = "unknown"
-        decomposition = seasonal_decompose(
-            visits_over_time["visit_count"], model="additive", period=period
-        )
-        seasonal_strength = round(
-            np.var(decomposition.seasonal) / np.var(visits_over_time["visit_count"]), 4
-        )
-
-        seasonal = decomposition.seasonal
-        trend = decomposition.trend.dropna()
-        mean_trend = trend.mean()
-        peak_to_trough = seasonal.max() - seasonal.min()
-        seasonal_effect_pct = round((peak_to_trough / mean_trend) * 100, 2)
-        summary["estimated_seasonal_effect_%"] = (
-            f"~{seasonal_effect_pct}% between seasonal high and low"
-        )
-        summary["seasonal_strength"] = seasonal_strength
-        summary["seasonality_period"] = seasonality_period_desc
-
-    else:
-        summary["seasonal_strength"] = "Insufficient data for seasonality analysis"
-        summary["seasonality_period"] = "-"
-        summary["estimated_seasonal_effect_%"] = "-"
 
     # Forecasting Analysis
     MINIMUM_FORECAST = 6
@@ -359,10 +336,6 @@ def make_plots(
         ["Most Common Pass Type", summary["most_common_pass_type"]],
         ["Peak Visit Hour", f"{summary['peak_visit_hour']}:00"],
         ["Trend Slope", f"{summary['trend_slope']:.4f} increase {period_name}"],
-        [
-            "Seasonal Strength",
-            f"{summary['seasonal_strength']} {summary['seasonality_period']}",
-        ],
         ["Forecasted Visits (Next Year)", summary["total_forecasted_visits_next_year"]],
     ]
     fig = go.Figure(
