@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="plots-container">
+    {% for plot_html in plots %}
+    {{ plot_html|safe }}
+    {% endfor %}
+</div>
+{% endblock %}

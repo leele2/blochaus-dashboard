@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+
+<form method="POST" style="margin-top: 20px;">
+    {% csrf_token %}
+    <button type="submit" name="logout" value="1">Logout</button>
+</form>
+
+<form method="POST">
+    {% csrf_token %}
+    Start Date:
+    <input type="date" name="start_date" value="{{ request.POST.start_date }}"><br>
+    End Date:
+    <input type="date" name="end_date" value="{{ request.POST.end_date }}"><br>
+    <button type="submit">Generate Plots</button>
+</form>
+
+{% for plot in plots %}
+<div>{{ plot|safe }}</div>
+{% endfor %}
+{% endblock %}

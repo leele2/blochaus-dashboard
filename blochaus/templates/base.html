@@ -1,0 +1,21 @@
+<!-- base.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}Blochaus Dashboard{% endblock %}</title>
+
+        <!-- Load Plotly globally -->
+        <!-- If plots aren't loading check it's right version-->
+        <script src="https://cdn.plot.ly/plotly-3.0.1.min.js"></script>
+
+        {% block head %}{% endblock %}
+    </head>
+
+    <body>
+        {% block content %}{% endblock %}
+    </body>
+
+</html>
