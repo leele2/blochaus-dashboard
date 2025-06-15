@@ -17,16 +17,14 @@ def landing_page(request):
 
 
 def login_page(request):
-    if request.session.get("username", "") and request.COOKIES.get(
-        "remembered_password"
-    ):
+    if request.session.get("username", "") and request.COOKIES.get("remember_me"):
         return redirect("dashboard")
 
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
         remember_password = (
-            request.POST.get("remember_password") == "on"
+            request.POST.get("remember_me") == "on"
         )  # checkbox for "Remember me"
 
         if verify_auth(username, password):
@@ -39,7 +37,7 @@ def login_page(request):
                 # Encrypt the password and store cookie
                 encrypted_password = fernet.encrypt(password.encode()).decode()
                 response.set_cookie(
-                    "remembered_password",
+                    "remember_me",
                     encrypted_password,
                     max_age=PASSWORD_COOKIE_DURATION,
                     secure=True,
@@ -50,7 +48,7 @@ def login_page(request):
                 # Session cookie (no max_age) — cookie lasts until browser closes
                 encrypted_password = fernet.encrypt(password.encode()).decode()
                 response.set_cookie(
-                    "remembered_password",
+                    "remember_me",
                     encrypted_password,
                     secure=True,
                     httponly=True,
@@ -67,13 +65,12 @@ def login_page(request):
 
     return render(request, "login_form.html", {"username": username})
 
+
 def dashboard(request):
     from django.core.cache import cache
 
     # Check login session or cookie
-    if "username" not in request.session and not request.COOKIES.get(
-        "remembered_password"
-    ):
+    if "username" not in request.session and not request.COOKIES.get("remember_me"):
         return redirect("login")
 
     # Handle logout
@@ -81,7 +78,7 @@ def dashboard(request):
         response = redirect("login")
         session_key = request.session.session_key
         request.session.flush()
-        response.delete_cookie("remembered_password")
+        response.delete_cookie("remember_me")
 
         if session_key:
             cache.delete(f"user_plots_{session_key}")
@@ -97,7 +94,7 @@ def dashboard(request):
         start_date = request.POST.get("start_date")
         end_date = request.POST.get("end_date")
         username = request.session.get("username")
-        encrypted_password = request.COOKIES.get("remembered_password")
+        encrypted_password = request.COOKIES.get("remember_me")
 
         if not (username and encrypted_password):
             return redirect("login")
