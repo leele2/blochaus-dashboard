@@ -4,7 +4,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timezone
 import pytz
+from scipy import stats
 import numpy as np
+from sklearn.linear_model import LinearRegression
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 from .utils import retrieve_data
 
@@ -241,11 +246,12 @@ def make_plots(
         .rolling(window=3, center=True, min_periods=1)
         .mean()
     )
-    x = np.arange(len(visits_over_time))
-    y = visits_over_time["visit_count"].values
-
-    slope, intercept = np.polyfit(x, y, 1)
+    slope, intercept, r_value, p_value, std_err = stats.linregress(
+        range(len(visits_over_time)), visits_over_time["visit_count"]
+    )
     summary["trend_slope"] = round(slope, 4)
+    summary["trend_r_squared"] = round(r_value**2, 4)
+    summary["trend_p_value"] = round(p_value, 4)
     trend_line = intercept + slope * np.arange(len(visits_over_time))
 
     # Seasonality Analysis
@@ -265,6 +271,28 @@ def make_plots(
         else:
             period = 1  # fallback
             seasonality_period_desc = "unknown"
+        decomposition = seasonal_decompose(
+            visits_over_time["visit_count"], model="additive", period=period
+        )
+        seasonal_strength = round(
+            np.var(decomposition.seasonal) / np.var(visits_over_time["visit_count"]), 4
+        )
+
+        seasonal = decomposition.seasonal
+        trend = decomposition.trend.dropna()
+        mean_trend = trend.mean()
+        peak_to_trough = seasonal.max() - seasonal.min()
+        seasonal_effect_pct = round((peak_to_trough / mean_trend) * 100, 2)
+        summary["estimated_seasonal_effect_%"] = (
+            f"~{seasonal_effect_pct}% between seasonal high and low"
+        )
+        summary["seasonal_strength"] = seasonal_strength
+        summary["seasonality_period"] = seasonality_period_desc
+
+    else:
+        summary["seasonal_strength"] = "Insufficient data for seasonality analysis"
+        summary["seasonality_period"] = "-"
+        summary["estimated_seasonal_effect_%"] = "-"
 
     # Forecasting Analysis
     MINIMUM_FORECAST = 6
@@ -274,21 +302,42 @@ def make_plots(
             start=ts_data.index[-1] + pd.offsets.MonthBegin(0), periods=12, freq="MS"
         )
 
+        def try_exponential_smoothing():
+            model = ExponentialSmoothing(
+                ts_data, trend="add", seasonal="add", seasonal_periods=12
+            ).fit()
+            forecast = model.forecast(12)
+            return forecast
+
         def try_linear_regression():
             ts_data_reset = ts_data.reset_index()
             ts_data_reset["t"] = np.arange(len(ts_data_reset))
-            
-            # Fit a first-degree polynomial (line) using NumPy
-            slope, intercept = np.polyfit(ts_data_reset["t"], ts_data_reset["y"], 1)
-
-            # Predict future values
-            future_t = np.arange(len(ts_data_reset), len(ts_data_reset) + 12)
-            forecast = slope * future_t + intercept
-
+            reg = LinearRegression().fit(ts_data_reset[["t"]], ts_data_reset["y"])
+            future_t = np.arange(len(ts_data_reset), len(ts_data_reset) + 12).reshape(
+                -1, 1
+            )
+            forecast = reg.predict(future_t)
             return pd.Series(forecast, index=future_dates)
-        
-        forecast_series = try_linear_regression()
-        forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
+
+        def try_sarimax():
+            model = SARIMAX(ts_data, order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
+            model_fit = model.fit(disp=False)
+            forecast = model_fit.forecast(steps=len(future_dates))
+            return pd.Series(forecast, index=future_dates)
+
+        # Try Prophet if available and more than 12 months of data
+        if len(monthly_counts) >= 12:
+            print(f"Prophet failed: {e}. Falling back to Exponential Smoothing.")
+            forecast_series = try_exponential_smoothing()
+            forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
+        else:
+            try:
+                forecast_series = try_sarimax()
+                forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
+            except Exception as e:
+                print(f"SARIMAX failed: {e}. Falling back to Linear Regression.")
+                forecast_series = try_linear_regression()
+                forecast_df = pd.DataFrame({"ds": future_dates, "y": forecast_series})
 
         # Add forecast type
         forecast_df["type"] = "Forecast"
@@ -336,6 +385,10 @@ def make_plots(
         ["Most Common Pass Type", summary["most_common_pass_type"]],
         ["Peak Visit Hour", f"{summary['peak_visit_hour']}:00"],
         ["Trend Slope", f"{summary['trend_slope']:.4f} increase {period_name}"],
+        [
+            "Seasonal Strength",
+            f"{summary['seasonal_strength']} {summary['seasonality_period']}",
+        ],
         ["Forecasted Visits (Next Year)", summary["total_forecasted_visits_next_year"]],
     ]
     fig = go.Figure(
